@@ -6,7 +6,7 @@ A beginner-friendly, end-to-end CI/CD demo using **Jenkins**, **Maven**, and **S
 
 ---
 
-## Table of Contents
+### Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
