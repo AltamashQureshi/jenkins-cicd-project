@@ -1,0 +1,76 @@
+// ============================================================
+//  Jenkinsfile — Local CI/CD Pipeline (Declarative Syntax)
+// ============================================================
+
+pipeline {
+
+    agent any
+
+    environment {
+        APP_NAME  = "cicd-demo-app"
+        DEPLOY_DIR = "/opt/deploy/${APP_NAME}"
+        WAR_FILE  = "app/target/${APP_NAME}-1.0-SNAPSHOT.war"
+    }
+
+    stages {
+
+        // Stage 1: Pull latest code from Git
+        stage('Checkout') {
+            steps {
+                echo ">>> Checking out source code from Git..."
+                checkout scm
+            }
+        }
+
+        // Stage 2: Compile Java source and package into WAR
+        // -DskipTests skips tests here — tests run separately in Stage 3
+        stage('Build') {
+            steps {
+                echo ">>> Building the application with Maven..."
+                dir('app') {
+                    sh 'mvn clean package -DskipTests'
+                }
+                echo ">>> Build complete! WAR file: ${WAR_FILE}"
+            }
+        }
+
+        // Stage 3: Run all JUnit tests
+        // If any test fails, pipeline stops and marks build FAILED
+        stage('Test') {
+            steps {
+                echo ">>> Running unit tests..."
+                dir('app') {
+                    sh 'mvn test'
+                }
+            }
+            post {
+                always {
+                    // Publish JUnit test results in Jenkins dashboard
+                    junit allowEmptyResults: true,
+                          testResults: 'app/target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // Stage 4: Deploy WAR file to local directory
+        stage('Deploy') {
+            steps {
+                echo ">>> Deploying to: ${DEPLOY_DIR}"
+                sh "bash scripts/deploy.sh ${WAR_FILE} ${DEPLOY_DIR}"
+                echo ">>> Deployment complete!"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline PASSED! App deployed successfully."
+        }
+        failure {
+            echo "Pipeline FAILED! Check logs above for errors."
+        }
+        always {
+            echo "Pipeline finished. Status: ${currentBuild.result}"
+        }
+    }
+}
